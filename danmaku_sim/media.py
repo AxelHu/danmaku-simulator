@@ -5,6 +5,7 @@ import hashlib
 import json
 import math
 import os
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from pathlib import Path
 import re
 import subprocess
@@ -105,6 +106,9 @@ def transcribe(source, info, config, client, workdir):
         raise ValueError("Audio/video starts differ; supply an aligned transcript or normalize timestamps first")
     if stt.get("type") != "minimax":
         raise ValueError("Configure stt.type=minimax or supply --transcript / --no-stt")
+    timestamp_level = stt.get("timestamp_level", "sentence")
+    if timestamp_level not in ("sentence", "word"):
+        raise ValueError("stt.timestamp_level must be sentence or word")
     key_name = stt.get("api_key_env", "MINIMAX_API_KEY")
     key = os.environ.get(key_name, "")
     if not key:
@@ -122,22 +126,30 @@ def transcribe(source, info, config, client, workdir):
         core_end = min(duration, core_start + chunk_seconds)
         start = max(0, core_start - 1.5)
         end = min(duration, core_end + 1.5)
-        audio = workdir / f"chunk-{number:04}.wav"
+        # Keep old automatically selected WAVs separate; the content-addressed
+        # ASR response cache can still reuse an identical first-track extraction.
+        audio = workdir / f"chunk-a0-{number:04}.wav"
         if not audio.exists():
-            run_ffmpeg(["-v", "error", "-ss", start, "-i", source, "-t", end - start, "-vn", "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le", "-y", audio])
+            # probe() checks the first audio stream; do not let ffmpeg auto-select
+            # a different language or a higher-channel-count track for STT.
+            run_ffmpeg(["-v", "error", "-ss", start, "-i", source, "-map", "0:a:0", "-t", end - start, "-vn", "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le", "-y", audio])
         audio_digest = file_hash(audio)
         identity = {"version": 1, "audio": audio_digest, "language": language, "model": "asr-1.0", "base_url": stt["base_url"]}
+        # Preserve legacy sentence-cache keys; word timestamps are distinct data.
+        if timestamp_level != "sentence":
+            identity["timestamp_level"] = timestamp_level
         digest = hashlib.sha256(canonical(identity).encode()).hexdigest()
         raw_file = workdir / f"response-{digest}.json"
         base = {"stage": "stt", "provider": "minimax-stt", "model": "asr-1.0", "cache_key": digest,
-                "billing_mode": stt.get("billing_mode", "unknown"), "currency": stt.get("currency", "USD")}
+                "billing_mode": stt.get("billing_mode", "unknown"), "currency": stt.get("currency", "USD"),
+                "timestamp_level": timestamp_level}
         if raw_file.exists():
             raw = json.loads(raw_file.read_text(encoding="utf-8"))
             client.record({**base, "status": "local_cache_hit", "local_cache_hit": True, "request_count": 0, "estimated_cost": 0})
         else:
             boundary = "----danmaku-" + uuid.uuid4().hex
             parts = []
-            for name, value in {"model": "asr-1.0", "response_format": "verbose_json", "timestamp_level": "sentence", "stream": "false"}.items():
+            for name, value in {"model": "asr-1.0", "response_format": "verbose_json", "timestamp_level": timestamp_level, "stream": "false"}.items():
                 parts.append(f'--{boundary}\r\nContent-Disposition: form-data; name="{name}"\r\n\r\n{value}\r\n'.encode())
             parts.append(f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="audio.wav"\r\nContent-Type: audio/wav\r\n\r\n'.encode() + audio.read_bytes() + b"\r\n")
             parts.append(f"--{boundary}--\r\n".encode())
@@ -169,15 +181,26 @@ def transcribe(source, info, config, client, workdir):
             midpoint = start + (segment["start"] + segment["end"]) / 2
             if core_start <= midpoint < core_end:
                 all_segments.append({**segment, "start": segment["start"] + start, "end": min(duration, segment["end"] + start)})
-    return normalize_transcript(all_segments, duration), {"status": "completed", "calls": calls, "chunks": math.ceil(duration / chunk_seconds),
+    return normalize_transcript(all_segments, duration), {"status": "completed", "calls": calls, "chunks": math.ceil(duration / chunk_seconds), "timestamp_level": timestamp_level,
         "note": "ASR timestamps are estimates; overlap uses midpoint ownership. Check representative scene/audio anchors."}
 
 
 def frame_plan(source, duration, transcript, settings):
     interval = float(settings.get("frame_interval", 8))
     maximum = int(settings.get("max_frames", 24))
-    if interval <= 0 or not 1 <= maximum <= 500:
+    if not math.isfinite(interval) or interval <= 0 or not 1 <= maximum <= 500:
         raise ValueError("frame_interval must be positive and max_frames 1..500")
+    mode = settings.get("sampling_mode", "mixed")
+    if mode not in ("mixed", "uniform"):
+        raise ValueError("analysis.sampling_mode must be mixed or uniform")
+    if mode == "uniform":
+        # Reserve the whole span by time, without decoding every source frame for
+        # scene detection or concentrating the budget around dense dialogue/cuts.
+        first = min(.3, duration / 2)
+        last = max(first, duration - .1)
+        count = min(maximum, max(1, math.ceil((last - first) / interval) + 1))
+        points = [round(first + i * (last - first) / max(1, count - 1), 3) for i in range(count)]
+        return [{"time": at, "reason": "uniform"} for at in sorted(set(points)) if 0 <= at < duration], []
     candidates = [(round(min(.3, duration / 2), 3), "opening")]
     candidates += [(round(i * interval, 3), "periodic") for i in range(1, math.ceil(duration / interval))]
     candidates += [(round(min(duration - .1, row["end"] + .2), 3), "speech-cue") for row in transcript if any(t in row["text"].lower() for t in ("看", "这里", "这边", "look", "see", "there"))]
@@ -202,9 +225,14 @@ def analyze(source, run_dir, config, client, *, transcript_path=None, no_stt=Fal
     source = Path(source).resolve()
     run_dir = Path(run_dir)
     settings = config.get("analysis", {})
+    concurrency = settings.get("vision_concurrency", 1)
+    if type(concurrency) is not int or not 1 <= concurrency <= 8:
+        raise ValueError("analysis.vision_concurrency must be an integer between 1 and 8")
     media = probe(source)
     video = {"id": file_hash(source), "title": source.stem, **media}
-    binding = {"video": video["id"], "settings": settings, "stt": config.get("stt", {}),
+    # Execution parallelism does not alter observations or their cache identity.
+    binding_settings = {key: value for key, value in settings.items() if key != "vision_concurrency"}
+    binding = {"video": video["id"], "settings": binding_settings, "stt": config.get("stt", {}),
                "transcript_hash": file_hash(transcript_path) if transcript_path else None, "no_stt": no_stt, "no_vision": no_vision}
     manifest_file = run_dir / "analysis-manifest.json"
     if manifest_file.exists() and json.loads(manifest_file.read_text()) != binding:
@@ -224,7 +252,12 @@ def analyze(source, run_dir, config, client, *, transcript_path=None, no_stt=Fal
     vision_provider = settings.get("vision_provider")
     if not no_vision and not vision_provider:
         raise ValueError("Configure analysis.vision_provider or explicitly use --no-vision")
-    for index, frame in enumerate(plan):
+    plan = [{**frame, "status": "pending"} for frame in plan]
+    write_json(run_dir / "frames.json", plan)
+
+    def analyze_frame(index, original):
+        # A worker owns its copy; only the coordinator writes progress snapshots.
+        frame = dict(original)
         path = run_dir / "frames" / f"{index:04}-{frame['time']:08.3f}.jpg"
         path.parent.mkdir(parents=True, exist_ok=True)
         try:
@@ -234,14 +267,12 @@ def analyze(source, run_dir, config, client, *, transcript_path=None, no_stt=Fal
                 raise ValueError("No frame produced")
         except (ValueError, OSError):
             frame.update({"status": "failed", "error": "Frame extraction failed"})
-            warnings.append(f"Frame {index} extraction failed")
-            write_json(run_dir / "frames.json", plan)
-            continue
+            return index, frame, None, f"Frame {index} extraction failed"
         frame["path"] = str(path.resolve())
         frame["sha256"] = file_hash(path)
         if no_vision:
             frame["status"] = "not_analyzed"
-            continue
+            return index, frame, None, None
         reply = None
         try:
             reply = client.complete(vision_provider,
@@ -256,14 +287,43 @@ def analyze(source, run_dir, config, client, *, transcript_path=None, no_stt=Fal
             if not isinstance(text, str) or not text.strip() or not math.isfinite(salience):
                 raise ValueError("Invalid visual observation")
             frame.update({"status": "completed", "observation": observation, "model": reply["model"]})
-            events.append({"id": f"v{index}", "start": frame["time"], "end": frame["time"], "available_at": frame["time"],
-                           "kind": "visual", "text": text[:1200], "salience": max(0, min(1, salience)), "uncertain": bool(observation.get("uncertain", False))})
+            event = {"id": f"v{index}", "start": frame["time"], "end": frame["time"], "available_at": frame["time"],
+                     "kind": "visual", "text": text[:1200], "salience": max(0, min(1, salience)), "uncertain": bool(observation.get("uncertain", False))}
+            return index, frame, event, None
         except (ProviderError, ValueError, KeyError, TypeError) as error:
             if reply and hasattr(client, "invalidate"):
                 client.invalidate(reply.get("cache_key"))
             frame.update({"status": "failed", "error": str(error)[:250]})
-            warnings.append(f"Frame {index} analysis failed: {type(error).__name__}")
+            return index, frame, None, f"Frame {index} analysis failed: {type(error).__name__}"
+
+    frame_warnings = {}
+
+    def collect(completed):
+        index, frame, event, warning = completed
+        plan[index] = frame
+        if event is not None:
+            events.append(event)
+        if warning:
+            frame_warnings[index] = warning
         write_json(run_dir / "frames.json", plan)
+
+    if concurrency == 1:
+        for index, frame in enumerate(plan):
+            collect(analyze_frame(index, frame))
+    elif plan:
+        # Keep only concurrency jobs in flight. A local progress-write failure
+        # must not leave the whole movie queued for additional paid requests.
+        with ThreadPoolExecutor(max_workers=concurrency) as executor:
+            pending, next_index = {}, 0
+            while pending or next_index < len(plan):
+                while len(pending) < concurrency and next_index < len(plan):
+                    pending[executor.submit(analyze_frame, next_index, plan[next_index])] = next_index
+                    next_index += 1
+                finished, _ = wait(pending, return_when=FIRST_COMPLETED)
+                for future in sorted(finished, key=lambda item: pending[item]):
+                    pending.pop(future)
+                    collect(future.result())
+    warnings.extend(frame_warnings[index] for index in sorted(frame_warnings))
     if not events:
         raise ValueError("Analysis produced no speech or visual events; generation would be ungrounded")
     events.sort(key=lambda e: (e["available_at"], e["id"]))
