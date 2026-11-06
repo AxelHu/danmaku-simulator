@@ -10,6 +10,8 @@
 
 首个真实样例已完成：52 秒 Sintel 预告片，**63 条独立弹幕 + 2 条受控复读**，含一份 STT 的完整参考成本约 **$0.017**。这是单个样本的测量，并非账单实扣或观看质量保证。详见[实测报告](docs/EXPERIMENT_2026-11-06.md)。
 
+[91 分钟长片实测报告](docs/LONGFORM_EXPERIMENT_2026-11-06.md)记录了 **2,803 条最终弹幕**、失败恢复和完整费用边界，并附脱敏聚合数据。NAS 条件写与读回已通过；当贝盒子上的 MzDKPlayer NAS 兼容版已实际载入全部弹幕，片头显示、暂停恢复及跳转至约一小时处的同步检查通过。实机验收覆盖这些片段，尚未连续观看全片。
+
 ![Sintel 实测弹幕预览](docs/images/sintel-preview.png)
 
 画面 © Blender Foundation / Durian Open Movie Project，CC BY 3.0；中文 AI 弹幕与界面叠层由本项目添加。
@@ -165,6 +167,8 @@ B 站风格的目标是短句、口语、针对当前片段的具体反应。不
 ## 运行产物
 
 `runs/<name>/` 包含 `analysis.json`、`transcript.json`、`frames.json`、`comments.json`、`export.xml`、`export.ass`、`usage.jsonl` 和 `usage-summary.json`。原始响应、素材路径和账号相关运行信息都留在忽略目录，不随源码发布。
+
+`ModelClient` 的每次实际响应另存到 `responses/attempts/`，使用排他创建的独立文件名；`usage.jsonl` 的 `raw_response_path`、`raw_response_sha256`、`raw_response_bytes` 和 `raw_response_truncated` 可定位并核对原始字节。空内容、无效 JSON 或截断正文同样留档；同键重试及重复供应商请求 ID 不覆盖旧尝试。本地缓存命中不创建新尝试，`responses/<cache_key>.json` 仅作为最新可解析回执的兼容入口。
 
 `comments.json` 的每条弹幕包含 `time`、`text`、`persona`、`provider`、`model`、`event_id` 和 `knowledge_cutoff`。这使质量问题能够追到产生它的证据和请求，而不只看到一句脱离来源的文本。
 
