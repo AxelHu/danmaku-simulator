@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "danmaku-simulator"
+version = "0.1.0"
+description = "Independent AI viewers for local videos, with causal timing and observable cost"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [{name = "AxelHu"}]
+dependencies = []
+
+[project.scripts]
+danmaku-sim = "danmaku_sim.cli:main"
+
+[tool.setuptools]
+packages = ["danmaku_sim", "danmaku_sim.web"]
+
+[tool.setuptools.package-dir]
+"danmaku_sim.web" = "web"
+
+[tool.setuptools.package-data]
+"danmaku_sim.web" = ["*.html", "*.js", "*.css"]

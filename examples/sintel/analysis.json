@@ -1,0 +1,166 @@
+{
+  "schema_version": 1,
+  "video": {
+    "id": "b670602fa00934ca27c4351bb0efe7ea7a07fae57284e44226025eeed7c51254",
+    "title": "Sintel · 2026-11-06 实测回放",
+    "duration": 52.208333,
+    "width": 854,
+    "height": 480,
+    "has_audio": true,
+    "audio_start_offset": 0.0,
+    "video_start_offset": 0.0
+  },
+  "transcript": [
+    {
+      "id": "s0",
+      "start": 12.18,
+      "end": 14.36,
+      "text": "What brings you to the land of the gatekeepers?"
+    }
+  ],
+  "events": [
+    {
+      "id": "v0",
+      "start": 0.3,
+      "end": 0.3,
+      "available_at": 0.3,
+      "kind": "visual",
+      "text": "画面全黑，没有可见内容。",
+      "salience": 0.02,
+      "uncertain": false
+    },
+    {
+      "id": "v1",
+      "start": 6.0,
+      "end": 6.0,
+      "available_at": 6.0,
+      "kind": "visual",
+      "text": "穿厚毛边连帽衣的人低头站在雪山前，双手握长杖，面部被帽子遮挡。",
+      "salience": 0.85,
+      "uncertain": false
+    },
+    {
+      "id": "v2",
+      "start": 12.0,
+      "end": 12.0,
+      "available_at": 12.0,
+      "kind": "visual",
+      "text": "暗光下戴冠留胡须的男子面部，画面很暗。",
+      "salience": 0.6,
+      "uncertain": true
+    },
+    {
+      "id": "s0",
+      "start": 12.18,
+      "end": 14.36,
+      "text": "What brings you to the land of the gatekeepers?",
+      "available_at": 14.36,
+      "kind": "speech",
+      "salience": 0.6
+    },
+    {
+      "id": "v3",
+      "start": 16.65,
+      "end": 16.65,
+      "available_at": 16.65,
+      "kind": "visual",
+      "text": "俯拍雪地，人物双手横握长棍，脸上有污痕，周围有深色斑块。",
+      "salience": 0.9,
+      "uncertain": false
+    },
+    {
+      "id": "v4",
+      "start": 18.0,
+      "end": 18.0,
+      "available_at": 18.0,
+      "kind": "visual",
+      "text": "全黑画面，无可见内容。",
+      "salience": 0.05,
+      "uncertain": false
+    },
+    {
+      "id": "v5",
+      "start": 24.0,
+      "end": 24.0,
+      "available_at": 24.0,
+      "kind": "visual",
+      "text": "橙红天色下，石造城堡废墟与尖塔；红色有翼生物掠过画面中央，左侧还有细长红色带翼物体。",
+      "salience": 0.85,
+      "uncertain": true
+    },
+    {
+      "id": "v6",
+      "start": 26.025,
+      "end": 26.025,
+      "available_at": 26.025,
+      "kind": "visual",
+      "text": "左侧大型有翼生物展翼低头，下方一只小鸟形生物飞翔，背景为暖黄色云雾天空。",
+      "salience": 0.85,
+      "uncertain": true
+    },
+    {
+      "id": "v7",
+      "start": 27.567,
+      "end": 27.567,
+      "available_at": 27.567,
+      "kind": "visual",
+      "text": "动画少女面部特写：红棕色短发，双眼圆睁，嘴微张，神情惊讶；背景为橙黄色模糊天空。",
+      "salience": 0.9,
+      "uncertain": false
+    },
+    {
+      "id": "v8",
+      "start": 30.0,
+      "end": 30.0,
+      "available_at": 30.0,
+      "kind": "visual",
+      "text": "粉红短发者背对镜头，戴手套的手前伸；右前方有一只展开翼膜的小型飞行生物。",
+      "salience": 0.75,
+      "uncertain": true
+    },
+    {
+      "id": "v9",
+      "start": 36.0,
+      "end": 36.0,
+      "available_at": 36.0,
+      "kind": "visual",
+      "text": "沙丘与灰白天空，天空有模糊的淡色轮廓，看不清成因。",
+      "salience": 0.35,
+      "uncertain": true
+    },
+    {
+      "id": "v10",
+      "start": 42.0,
+      "end": 42.0,
+      "available_at": 42.0,
+      "kind": "visual",
+      "text": "深色背景中央显示白色圆形树形标志，下方为文字“SINTEL”。",
+      "salience": 0.12,
+      "uncertain": false
+    },
+    {
+      "id": "v11",
+      "start": 48.0,
+      "end": 48.0,
+      "available_at": 48.0,
+      "kind": "visual",
+      "text": "黑屏中央显示白色文字COMING SOON。",
+      "salience": 0.1,
+      "uncertain": false
+    }
+  ],
+  "diagnostics": {
+    "status": "completed",
+    "stt": {
+      "status": "imported",
+      "calls": 0
+    },
+    "frames_sampled": 12,
+    "frames_analyzed": 12,
+    "warnings": [],
+    "limitations": [
+      "Sparse single-frame observations do not measure continuous motion or music.",
+      "ASR and visual descriptions can be wrong; validate selected playback anchors."
+    ]
+  }
+}

@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="在自己的视频上预览合成弹幕，比较观众反应与生成成本。">
+  <title>弹幕模拟器 · Danmaku Simulator</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23fc8296'/%3E%3Cpath d='M8 8h16v13H14l-6 4V8Zm4 5h8m-8 4h6' fill='none' stroke='%23271a23' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./style.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <svg class="icon-definitions" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M7 5v14M17 5v14"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M3 10a9 9 0 1 1 1 8M3 4v6h6"/><path d="M9 12v5m3-5h3v5h-3Z"/></symbol>
+    <symbol id="i-volume" viewBox="0 0 24 24"><path d="m11 4-6 5H2v6h3l6 5ZM16 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></symbol>
+    <symbol id="i-muted" viewBox="0 0 24 24"><path d="m11 4-6 5H2v6h3l6 5Zm5 5 6 6m0-6-6 6"/></symbol>
+    <symbol id="i-fullscreen" viewBox="0 0 24 24"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7a9 9 0 0 0-15-2L2 8m0-6v6h6m-4 9a9 9 0 0 0 15 2l3-3m0 6v-6h-6"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h5l3 4h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Zm0 0h18"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H5a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9Zm0 0v7h7M8 14h8m-8 4h6"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M4 15v6h16v-6"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 15a3 3 0 0 1-3 3H9l-6 4V5a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3ZM7 7h10M7 12h6"/></symbol>
+    <symbol id="i-follow" viewBox="0 0 24 24"><path d="m7 6 5 5 5-5m-10 7 5 5 5-5"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+  </svg>
+
+  <header class="site-header">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"><svg><use href="#i-chat"/></svg></span>
+      <div><strong>弹幕模拟器</strong><span class="brand-en">DANMAKU SIMULATOR</span></div>
+      <span class="version-badge">LAB</span>
+    </div>
+    <span class="experiment-label"><span class="status-dot"></span>合成弹幕 · 本地观看</span>
+  </header>
+
+  <main class="workspace">
+    <section class="page-intro" aria-labelledby="pageTitle">
+      <div><p class="eyebrow">YOUR OWN WATCH PARTY</p><h1 id="pageTitle">给视频，多一点同屏的热闹。</h1><p class="intro-copy">选一段视频，听听不同观众会说什么。</p></div>
+      <div class="import-actions">
+        <button class="button secondary" id="importComments"><svg class="icon"><use href="#i-file"/></svg>导入弹幕</button>
+        <button class="button primary" id="importVideo" title="选择本地视频，保留当前弹幕"><svg class="icon"><use href="#i-folder"/></svg>选择视频</button>
+      </div>
+      <input id="videoFile" type="file" accept="video/*,.mkv,.webm,.mov,.mp4" hidden>
+      <input id="commentsFile" type="file" accept="application/json,.json" hidden>
+    </section>
+
+    <div class="notice" id="notice" role="status" aria-live="polite" hidden></div>
+
+    <section class="run-bar" aria-label="选择运行结果">
+      <div class="run-picker"><span class="field-caption">当前放映</span><select id="runSelect" aria-label="选择生成结果" disabled><option value="">正在读取运行结果…</option></select><button class="icon-button refresh-button" id="refreshRuns" aria-label="刷新运行结果" title="刷新运行结果"><svg class="icon"><use href="#i-refresh"/></svg></button></div>
+      <div class="run-meta"><span id="runStatus" class="pill neutral">等待视频</span><span id="runInfo" class="muted">视频与弹幕在这里相遇</span></div>
+    </section>
+
+    <div class="screen-layout">
+      <section class="watch-column" aria-label="视频与弹幕预览">
+        <div class="player-shell" id="playerShell">
+          <div class="video-stage" id="videoStage">
+            <video id="video" playsinline preload="metadata" aria-label="视频播放器"></video>
+            <canvas id="danmakuCanvas" aria-hidden="true"></canvas>
+            <div class="player-placeholder" id="playerPlaceholder">
+              <div class="empty-art" aria-hidden="true"><span class="empty-bullet bullet-a">前排就位</span><span class="empty-bullet bullet-b">一起看</span><span class="empty-play"><svg><use href="#i-play"/></svg></span><span class="empty-bullet bullet-c">好戏开场 →</span></div>
+              <h2 id="placeholderTitle">你的私人放映间</h2>
+              <p id="placeholderText">选择运行结果，或打开本地视频与弹幕文件。</p>
+              <button class="button secondary small" id="emptyChooseVideo"><svg class="icon"><use href="#i-folder"/></svg>打开本地视频</button>
+            </div>
+            <div class="media-busy" id="mediaBusy" hidden><span class="spinner"></span><span>正在载入视频</span></div>
+            <span class="video-corner-label" id="videoCornerLabel" hidden>弹幕预览</span>
+          </div>
+          <div class="transport">
+            <input class="seek-bar" id="seek" type="range" min="0" max="1" value="0" step="0.01" aria-label="播放位置" disabled>
+            <div class="transport-row">
+              <button class="icon-button play-button" id="play" aria-label="播放" title="播放 / 暂停（空格）" disabled><svg class="icon"><use id="playIcon" href="#i-play"/></svg></button>
+              <button class="icon-button" id="rewind" aria-label="后退十秒" title="后退十秒" disabled><svg class="icon"><use href="#i-back"/></svg></button>
+              <span class="timecode"><span id="currentTime">00:00</span><span class="time-separator">/</span><span id="durationTime">00:00</span></span>
+              <div class="transport-spacer"></div>
+              <div class="volume-controls"><button class="icon-button" id="mute" aria-label="静音" title="静音（M）"><svg class="icon"><use id="volumeIcon" href="#i-volume"/></svg></button><input id="volume" type="range" min="0" max="1" value="1" step="0.05" aria-label="音量"></div>
+              <select class="speed-select" id="playbackRate" aria-label="播放速度" title="播放速度"><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="2">2×</option></select>
+              <button class="icon-button" id="fullscreen" aria-label="全屏" title="全屏（F）"><svg class="icon"><use href="#i-fullscreen"/></svg></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="tuning-card">
+          <div class="tuning-heading"><button class="danmaku-toggle" id="danmakuToggle" type="button" aria-pressed="true"><svg class="icon"><use href="#i-chat"/></svg><span>弹幕开启</span><span class="switch-track"><span></span></span></button><span class="tuning-note" id="layoutHint">拥挤时自动避让</span></div>
+          <div class="tuning-grid">
+            <label class="slider-field" for="density"><span>密度<output id="densityValue" for="density">100%</output></span><input id="density" type="range" min="10" max="100" step="5" value="100"></label>
+            <label class="slider-field" for="opacity"><span>透明度<output id="opacityValue" for="opacity">85%</output></span><input id="opacity" type="range" min="20" max="100" step="5" value="85"></label>
+            <label class="slider-field" for="fontSize"><span>字号<output id="fontSizeValue" for="fontSize">24</output></span><input id="fontSize" type="range" min="16" max="40" step="1" value="24"></label>
+            <label class="area-field" for="displayArea"><span>显示范围</span><select id="displayArea"><option value="0.3">顶部三分之一</option><option value="0.5" selected>上半屏</option><option value="0.75">四分之三屏</option><option value="1">全屏</option></select></label>
+          </div>
+        </div>
+        <p class="local-hint" id="localHint">本地选择的文件仅在浏览器中预览。</p>
+      </section>
+
+      <aside class="comments-panel" aria-labelledby="commentsTitle">
+        <div class="panel-heading"><div><h2 id="commentsTitle">弹幕列表</h2><span class="count-badge" id="commentCount">0</span></div><button class="follow-button" id="follow" aria-pressed="true" title="跟随播放位置"><svg class="icon"><use href="#i-follow"/></svg>跟随</button></div>
+        <div class="comment-search"><svg class="icon"><use href="#i-search"/></svg><input type="search" id="commentSearch" aria-label="搜索弹幕" placeholder="找一句弹幕…" autocomplete="off"></div>
+        <div class="list-columns"><span>时间</span><span>观众反应</span></div>
+        <div class="comments-scroll" id="commentsScroll" tabindex="0" aria-label="点击弹幕跳转到对应时间">
+          <div id="commentsList"></div>
+          <div class="comments-empty" id="commentsEmpty"><svg class="icon"><use href="#i-chat"/></svg><p>座位已经准备好了</p><span>载入弹幕后，每一条反应都会出现在这里。</span></div>
+        </div>
+        <div class="comments-footer"><span id="audienceCount">等待观众入场</span><span>点击时间可跳转</span></div>
+        <div class="export-row"><span><svg class="icon"><use href="#i-download"/></svg>导出</span><button id="exportXml" disabled>XML</button><button id="exportAss" disabled>ASS</button><button id="exportJson" disabled>JSON</button></div>
+      </aside>
+    </div>
+
+    <section class="usage-panel" aria-labelledby="usageTitle">
+      <div class="usage-heading"><div><p class="eyebrow">SMALL REACTIONS, VISIBLE COSTS</p><h2 id="usageTitle">这一场，用了多少？</h2></div><p id="usageCalls">载入运行结果后显示统计</p></div>
+      <div class="metric-grid">
+        <div class="metric metric-cost"><span class="metric-label">按量参考成本</span><strong id="metricCost">—</strong><span id="metricCostNote">尚未载入费用数据</span></div>
+        <div class="metric"><span class="metric-label">输入 Token</span><strong id="metricInput">—</strong><span id="metricInputNote">含缓存读取</span></div>
+        <div class="metric"><span class="metric-label">输出 Token</span><strong id="metricOutput">—</strong><span>包含接口报告的输出消耗</span></div>
+        <div class="metric"><span class="metric-label">提示词缓存命中</span><strong id="metricCache">—</strong><span id="metricCacheNote">以供应商返回用量为准</span></div>
+      </div>
+      <p class="billing-note" id="billingNote">参考成本由用量与价格配置折算；实际扣费以供应商账单为准。</p>
+      <div class="model-table-wrap" id="modelTableWrap" hidden><table class="model-table"><thead><tr><th scope="col">模型 / 阶段</th><th scope="col">输入</th><th scope="col">缓存读取</th><th scope="col">输出</th><th scope="col">参考成本</th></tr></thead><tbody id="modelTableBody"></tbody></table></div>
+    </section>
+
+    <footer class="page-footer"><span>Danmaku Simulator</span><span>独立反应，恰好相遇。</span><span>← / → 快进后退 · 空格暂停 · D 切换弹幕</span></footer>
+  </main>
+</body>
+</html>

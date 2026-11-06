@@ -1,0 +1,16 @@
+{
+  "title": "Sintel trailer",
+  "creator": "Blender Foundation / Durian Open Movie Project",
+  "copyright": "(c) Blender Foundation | durian.blender.org",
+  "license": "CC BY 3.0",
+  "license_url": "https://creativecommons.org/licenses/by/3.0/",
+  "source_page": "https://durian.blender.org/download/",
+  "trailer_page": "https://durian.blender.org/news/sintel-teaser/",
+  "download_url": "https://media.w3.org/2010/05/sintel/trailer.mp4",
+  "sha256": "b670602fa00934ca27c4351bb0efe7ea7a07fae57284e44226025eeed7c51254",
+  "bytes": 4372373,
+  "duration_seconds": 52.208333,
+  "changes": "Chinese AI-generated danmaku and screenshot overlay are additions. Source video is downloaded separately and is not included in this repository.",
+  "measured_at": "2026-11-06",
+  "usage_note": "recorded-usage.jsonl contains historical observed usage with request identifiers and cache keys removed; replay itself makes zero model API calls."
+}

@@ -1,0 +1,168 @@
+{
+  "schema_version": 1,
+  "video": {
+    "id": "b670602fa00934ca27c4351bb0efe7ea7a07fae57284e44226025eeed7c51254",
+    "title": "sintel-trailer",
+    "duration": 52.208333,
+    "width": 854,
+    "height": 480,
+    "has_audio": true,
+    "audio_start_offset": 0.0,
+    "video_start_offset": 0.0
+  },
+  "transcript": [
+    {
+      "id": "s0",
+      "start": 12.18,
+      "end": 14.36,
+      "text": "What brings you to the land of the gatekeepers?"
+    }
+  ],
+  "events": [
+    {
+      "id": "v0",
+      "start": 0.3,
+      "end": 0.3,
+      "available_at": 0.3,
+      "kind": "visual",
+      "text": "全黑画面，无可见文字、人物或物体。",
+      "salience": 0.1,
+      "uncertain": false
+    },
+    {
+      "id": "v1",
+      "start": 6.0,
+      "end": 6.0,
+      "available_at": 6.0,
+      "kind": "visual",
+      "text": "画面中央偏左是一名身穿厚重棕色服装、戴兜帽的人，垂眼低头，神情疲惫或忧郁；其右手握着一根长木杖或粗糙手杖，另一只手抬到胸前。背景是被白雾和积雪笼罩的陡峭山岩，灰白色调、景深朦胧，上下有黑色宽银幕边框。",
+      "salience": 0.82,
+      "uncertain": false
+    },
+    {
+      "id": "v2",
+      "start": 12.0,
+      "end": 12.0,
+      "available_at": 12.0,
+      "kind": "visual",
+      "text": "昏暗画面中，一名戴帽、留胡须的男子正面靠近镜头，面部大部分处于阴影中，帽沿下可见眼镜轮廓；身穿暗红色衣物，背景近乎全黑，左下角有一小部分手部或物体轮廓。",
+      "salience": 0.58,
+      "uncertain": true
+    },
+    {
+      "id": "s0",
+      "start": 12.18,
+      "end": 14.36,
+      "text": "What brings you to the land of the gatekeepers?",
+      "available_at": 14.36,
+      "kind": "speech",
+      "salience": 0.6
+    },
+    {
+      "id": "v3",
+      "start": 16.65,
+      "end": 16.65,
+      "available_at": 16.65,
+      "kind": "visual",
+      "text": "俯视构图下，一名深色衣着、长发的人站在白色地面上，双手握着一根横贯画面的长杆或长兵器，抬头看向镜头方向；周围地面散布着多组深色脚印状和不规则痕迹。画面上下有黑色边框。",
+      "salience": 0.82,
+      "uncertain": false
+    },
+    {
+      "id": "v4",
+      "start": 18.0,
+      "end": 18.0,
+      "available_at": 18.0,
+      "kind": "visual",
+      "text": "画面为全黑，没有可见的人物、物体、文字或构图信息。",
+      "salience": 0,
+      "uncertain": false
+    },
+    {
+      "id": "v5",
+      "start": 24.0,
+      "end": 24.0,
+      "available_at": 24.0,
+      "kind": "visual",
+      "text": "黄昏暖橙色天空下的石砌城堡废墟全景，远处高塔与穹顶轮廓，中间偏右一只展开双翼的红棕色飞鸟掠过塔楼间，右侧可见拱门与残破城墙，左侧远处还有另一只较小的展翅飞鸟。画面上下有黑色宽银幕边框。",
+      "salience": 0.7,
+      "uncertain": false
+    },
+    {
+      "id": "v6",
+      "start": 26.025,
+      "end": 26.025,
+      "available_at": 26.025,
+      "kind": "visual",
+      "text": "金黄色云层背景中，一只张开翅膀、带尖角和利爪的龙形生物从左上方向画面中央俯身；下方偏中间有一只展翅的小鸟。画面上下有黑色宽银幕边框。",
+      "salience": 0.9,
+      "uncertain": false
+    },
+    {
+      "id": "v7",
+      "start": 27.567,
+      "end": 27.567,
+      "available_at": 27.567,
+      "kind": "visual",
+      "text": "画面中央是一张动画年轻女性的面部特写：她的眼睛睁大、眉毛微扬，嘴巴张开，呈现出惊讶或震惊的表情。背景是橙金色的天空与云层，画面上下有黑色宽银幕边框。",
+      "salience": 0.92,
+      "uncertain": false
+    },
+    {
+      "id": "v8",
+      "start": 30.0,
+      "end": 30.0,
+      "available_at": 30.0,
+      "kind": "visual",
+      "text": "暖橙色洞穴或峡谷画面中，一名红色短发女性背对镜头，位于左侧并向画面中央伸出戴手套的手；右侧一只棕褐色、展开翼膜的蝙蝠状生物正朝她飞来。远处是层叠的拱形岩壁与烟雾，画面上下有黑色宽边；人物面部不可见。",
+      "salience": 0.82,
+      "uncertain": false
+    },
+    {
+      "id": "v9",
+      "start": 36.0,
+      "end": 36.0,
+      "available_at": 36.0,
+      "kind": "visual",
+      "text": "上下有黑色边框的宽幅画面，前景是一片金黄色沙丘，起伏的沙脊被低角度光线照亮；远处天空呈灰蓝色并带有薄雾，云层中隐约可见较大的灰暗轮廓。画面中没有清晰可辨的人物、动物或文字。",
+      "salience": 0.55,
+      "uncertain": true
+    },
+    {
+      "id": "v10",
+      "start": 42.0,
+      "end": 42.0,
+      "available_at": 42.0,
+      "kind": "visual",
+      "text": "黑色画面中央显示白色标志：圆圈内是一棵展开树冠的树，树下带有装饰性卷曲线条；下方以手写体呈现文字“SINTEL”，文字底部有一条白色横线。",
+      "salience": 0.8,
+      "uncertain": false
+    },
+    {
+      "id": "v11",
+      "start": 48.0,
+      "end": 48.0,
+      "available_at": 48.0,
+      "kind": "visual",
+      "text": "纯黑背景，画面中央以白色衬线字体显示“COMING SOON”，其余无可见人物、物体或装饰。",
+      "salience": 0.2,
+      "uncertain": false
+    }
+  ],
+  "diagnostics": {
+    "status": "completed",
+    "stt": {
+      "status": "completed",
+      "calls": 1,
+      "chunks": 1,
+      "note": "ASR timestamps are estimates; overlap uses midpoint ownership. Check representative scene/audio anchors."
+    },
+    "frames_sampled": 12,
+    "frames_analyzed": 12,
+    "warnings": [],
+    "limitations": [
+      "Sparse single-frame observations do not measure continuous motion or music.",
+      "ASR and visual descriptions can be wrong; validate selected playback anchors."
+    ]
+  }
+}
