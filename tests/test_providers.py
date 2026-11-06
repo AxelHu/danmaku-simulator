@@ -3,12 +3,15 @@
 All provider calls are mocked; these tests cannot incur API charges.
 """
 import copy
+import hashlib
+import http.client
 import io
 import json
 import os
 from pathlib import Path
 import tempfile
 import unittest
+import urllib.error
 from unittest.mock import Mock, patch
 
 from danmaku_sim.config import load_config
@@ -56,6 +59,17 @@ class ProviderTests(unittest.TestCase):
         opener = Mock()
         opener.open.side_effect = lambda *a, **kw: io.BytesIO(json.dumps(document).encode())
         return opener
+
+    def archived_bytes(self, client, row):
+        relative = Path(row["raw_response_path"])
+        self.assertFalse(relative.is_absolute())
+        path = client.run_dir / relative
+        self.assertEqual(path.parent, client.run_dir / "responses" / "attempts")
+        self.assertTrue(path.name.startswith("attempt-"))
+        payload = path.read_bytes()
+        self.assertEqual(row["raw_response_sha256"], hashlib.sha256(payload).hexdigest())
+        self.assertEqual(row["raw_response_bytes"], len(payload))
+        return payload
 
     def test_cache_tokens_and_reasoning_are_not_double_counted(self):
         pricing = self.config["providers"]["test"]["pricing"]
@@ -131,6 +145,84 @@ class ProviderTests(unittest.TestCase):
         self.assertEqual(summary["input_tokens"], 300)
         self.assertEqual(summary["cached_input_tokens"], 90)
 
+    def test_empty_retry_and_repeated_request_id_keep_distinct_raw_attempts(self):
+        client = self.client()
+        empty, good = self.response(""), self.response("a valid retry")
+        empty["id"] = good["id"] = "../../reused/provider-request"
+        documents = iter([empty, good])
+        opener = Mock()
+        opener.open.side_effect = lambda *a, **kw: io.BytesIO(json.dumps(next(documents)).encode())
+        with patch("danmaku_sim.providers.urllib.request.build_opener", return_value=opener):
+            with self.assertRaises(ProviderError):
+                client.complete("test", "system", "context", "viewer")
+            first_row = json.loads((client.run_dir / "usage.jsonl").read_text().splitlines()[0])
+            original = self.archived_bytes(client, first_row)
+            retried = client.complete("test", "system", "context", "viewer")
+            cached = client.complete("test", "system", "context", "viewer")
+        rows = [json.loads(line) for line in (client.run_dir / "usage.jsonl").read_text().splitlines()]
+        self.assertEqual(rows[0]["status"], "empty_response")
+        self.assertEqual(rows[1]["status"], "completed")
+        self.assertEqual(rows[0]["cache_key"], rows[1]["cache_key"])
+        self.assertEqual(rows[0]["request_id"], rows[1]["request_id"])
+        self.assertNotEqual(rows[0]["raw_response_path"], rows[1]["raw_response_path"])
+        self.assertEqual(self.archived_bytes(client, rows[0]), original)
+        self.assertEqual(json.loads(original), empty)
+        self.assertEqual(json.loads(self.archived_bytes(client, rows[1])), good)
+        self.assertFalse(rows[0]["raw_response_truncated"])
+        self.assertEqual(json.loads((client.run_dir / "responses" / (retried["cache_key"] + ".json")).read_text()), good)
+        self.assertTrue(cached["local_cache_hit"])
+        self.assertEqual(opener.open.call_count, 2)
+        self.assertEqual(len(list((client.run_dir / "responses" / "attempts").glob("*.json"))), 2)
+        summary = load_usage(client.run_dir)["summary"]
+        self.assertEqual((summary["request_count"], summary["local_cache_hits"], summary["input_tokens"]), (2, 1, 200))
+        self.assertAlmostEqual(summary["estimated_cost"], .000692)
+
+    def test_raw_transport_failures_leave_bounded_attempts(self):
+        class InterruptedBody(io.BytesIO):
+            def read(self, size=-1):
+                raise http.client.IncompleteRead(b'{"id":', 10)
+
+        cases = [
+            ("invalid-json", b'{"choices":', 1024, b'{"choices":', False),
+            ("http-error", b'{"error":"temporary failure"}', 1024, b'{"error":"temporary failure"}', False),
+            ("over-limit", b"x" * 100, 16, b"x" * 17, True),
+            ("interrupted", b"", 1024, b'{"id":', True),
+        ]
+        for name, body, limit, expected, truncated in cases:
+            with self.subTest(name=name):
+                client, opener = self.client(name), Mock()
+                if name == "http-error":
+                    opener.open.side_effect = urllib.error.HTTPError("https://models.invalid", 503, "unavailable", {}, io.BytesIO(body))
+                else:
+                    opener.open.return_value = InterruptedBody() if name == "interrupted" else io.BytesIO(body)
+                with patch("danmaku_sim.providers.urllib.request.build_opener", return_value=opener), \
+                     patch("danmaku_sim.providers._MAX_RESPONSE_BYTES", limit):
+                    with self.assertRaises(ProviderError):
+                        client.complete("test", "system", "context", "viewer")
+                rows = [json.loads(line) for line in (client.run_dir / "usage.jsonl").read_text().splitlines()]
+                self.assertEqual(len(rows), 1)
+                row = rows[0]
+                self.assertEqual(self.archived_bytes(client, row), expected)
+                self.assertEqual(row["raw_response_truncated"], truncated)
+                self.assertEqual(row["status"], "error")
+                self.assertEqual(row["request_count"], 1)
+                self.assertIsNone(row["estimated_cost"])
+                self.assertEqual(row["http_status"], 503 if name == "http-error" else None)
+                self.assertFalse(list(client.cache_dir.glob("*.json")))
+
+    def test_archive_io_failure_retains_received_usage_and_is_not_cached(self):
+        client = self.client()
+        with patch("danmaku_sim.providers.urllib.request.build_opener", return_value=self.opener(self.response())), \
+             patch.object(client, "_archive_response", side_effect=OSError("test archive failure")):
+            with self.assertRaisesRegex(ProviderError, "archive failed"):
+                client.complete("test", "system", "context", "viewer")
+        row = json.loads((client.run_dir / "usage.jsonl").read_text())
+        self.assertEqual(row["raw_response_archive_error"], "OSError")
+        self.assertNotIn("raw_response_path", row)
+        self.assertEqual(row["request_count"], 1)
+        self.assertAlmostEqual(row["estimated_cost"], .000346)
+        self.assertFalse(list(client.cache_dir.glob("*.json")))
+
     def test_bad_json_explicit_rerun_requests_again_without_erasing_usage(self):
         from danmaku_sim.engine import GenerationError, generate
 
@@ -140,8 +232,10 @@ class ProviderTests(unittest.TestCase):
             "events": [{"id": "s0", "start": 1, "end": 2, "available_at": 2,
                         "kind": "speech", "text": "这是一段测试对白", "salience": .6}],
         }
+        truncated = self.response("not valid JSON")
+        truncated["choices"][0]["finish_reason"] = "length"
         documents = iter([
-            self.response("not valid JSON"),
+            truncated,
             self.response(json.dumps({"comments": [
                 {"event_id": "s0", "text": "这句来得突然", "kind": "reaction"}
             ]})),
@@ -166,6 +260,14 @@ class ProviderTests(unittest.TestCase):
         final_ledger = (client.run_dir / "usage.jsonl").read_text().splitlines()
         self.assertEqual(len(final_ledger), 2)
         self.assertEqual(final_ledger[0], first_ledger[0])
+        rows = [json.loads(line) for line in final_ledger]
+        self.assertEqual(rows[0]["request_id"], rows[1]["request_id"])
+        self.assertNotEqual(rows[0]["raw_response_path"], rows[1]["raw_response_path"])
+        self.assertEqual(json.loads(self.archived_bytes(client, rows[0])), truncated)
+        self.assertEqual(rows[0]["stop_reason"], "length")
+        self.assertFalse(rows[0]["raw_response_truncated"], "Model truncation does not mean the HTTP capture was truncated")
+        self.assertEqual(json.loads(self.archived_bytes(client, rows[1]))["choices"][0]["message"]["content"],
+                         json.dumps({"comments": [{"event_id": "s0", "text": "这句来得突然", "kind": "reaction"}]}))
         summary = load_usage(client.run_dir)["summary"]
         self.assertEqual(summary["request_count"], 2)
         self.assertEqual(summary["local_cache_hits"], 0)

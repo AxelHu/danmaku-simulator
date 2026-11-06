@@ -7,12 +7,14 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import http.client
 import json
 import math
 import mimetypes
 import os
 from pathlib import Path
 import re
+import tempfile
 import threading
 import time
 import urllib.error
@@ -23,6 +25,9 @@ from datetime import datetime, timezone
 
 class ProviderError(RuntimeError):
     pass
+
+
+_MAX_RESPONSE_BYTES = 24 * 1024 * 1024
 
 
 def canonical(value):
@@ -109,6 +114,21 @@ class ModelClient:
             with (self.run_dir / "usage.jsonl").open("a", encoding="utf-8") as handle:
                 handle.write(canonical(row) + "\n")
 
+    def _archive_response(self, payload, *, truncated=False):
+        """Create one private, non-overwriting raw-body file per actual reply.
+
+        The name is independent of both the cache key and provider request ID.
+        Truncation describes a bounded/partial body read, not model stop_reason.
+        """
+        directory = self.run_dir / "responses" / "attempts"
+        directory.mkdir(parents=True, exist_ok=True)
+        descriptor, name = tempfile.mkstemp(prefix="attempt-", suffix=".json", dir=directory)
+        with os.fdopen(descriptor, "wb") as handle:
+            handle.write(payload)
+        return {"raw_response_path": (Path("responses") / "attempts" / Path(name).name).as_posix(),
+                "raw_response_sha256": hashlib.sha256(payload).hexdigest(),
+                "raw_response_bytes": len(payload), "raw_response_truncated": truncated}
+
     def invalidate(self, cache_key):
         """Discard one unusable result, retaining raw response and billing evidence.
 
@@ -189,15 +209,40 @@ class ModelClient:
         request = urllib.request.Request(endpoint, data=canonical(body).encode(), headers=headers, method="POST")
         started = time.monotonic()
         raw = None
+        payload = None
+        archive = {}
+
+        def retain_response(data, *, truncated=False):
+            nonlocal archive
+            try:
+                archive = self._archive_response(data, truncated=truncated)
+            except OSError as error:
+                # Still account for the received usage. A successful model
+                # response must not silently become an unrecorded charge when
+                # the local archive cannot be written.
+                archive = {"raw_response_archive_error": type(error).__name__}
+
         try:
             with urllib.request.build_opener(NoRedirect()).open(request, timeout=provider.get("timeout_seconds", 150)) as response:
-                payload = response.read(24 * 1024 * 1024 + 1)
-                if len(payload) > 24 * 1024 * 1024:
+                payload = response.read(_MAX_RESPONSE_BYTES + 1)
+                retain_response(payload, truncated=len(payload) > _MAX_RESPONSE_BYTES)
+                if len(payload) > _MAX_RESPONSE_BYTES:
                     raise ProviderError("Provider response too large")
                 raw = json.loads(payload)
         except Exception as error:
             code = error.code if isinstance(error, urllib.error.HTTPError) else None
-            self.record({**base_record, "status": "error", "error_type": type(error).__name__, "http_status": code,
+            if payload is None:
+                if isinstance(error, urllib.error.HTTPError):
+                    try:
+                        payload = error.read(_MAX_RESPONSE_BYTES + 1)
+                        retain_response(payload, truncated=len(payload) > _MAX_RESPONSE_BYTES)
+                    except http.client.IncompleteRead as body_error:
+                        retain_response(body_error.partial, truncated=True)
+                    except Exception as body_error:
+                        archive = {"raw_response_read_error": type(body_error).__name__}
+                elif isinstance(error, http.client.IncompleteRead):
+                    retain_response(error.partial, truncated=True)
+            self.record({**base_record, **archive, "status": "error", "error_type": type(error).__name__, "http_status": code,
                          "local_cache_hit": False, "request_count": 1, "estimated_cost": None,
                          "usage_known": False, "latency_seconds": round(time.monotonic() - started, 3),
                          "billing_uncertain": code is None or code >= 500})
@@ -232,7 +277,7 @@ class ModelClient:
                     text = "\n".join(block.get("text", "") for block in text if block.get("type") == "text")
                 stop_reason = choices[0].get("finish_reason") if choices else None
         except (ValueError, TypeError, AttributeError) as error:
-            self.record({**base_record, **usage, "status": "malformed_response", "model": returned_model,
+            self.record({**base_record, **archive, **usage, "status": "malformed_response", "model": returned_model,
                          "request_id": request_id, "local_cache_hit": False, "request_count": 1,
                          "estimated_cost": price_usage(usage, pricing), "error_type": type(error).__name__,
                          "latency_seconds": round(time.monotonic() - started, 3)})
@@ -240,13 +285,15 @@ class ModelClient:
             raise ProviderError(f"{provider_alias}: malformed response; usage was retained") from None
         valid = bool(isinstance(text, str) and text.strip())
         cost = price_usage(usage, pricing)
-        self.record({**base_record, **usage, "status": "completed" if valid else "empty_response", "model": returned_model,
+        self.record({**base_record, **archive, **usage, "status": "completed" if valid else "empty_response", "model": returned_model,
                      "request_id": request_id, "local_cache_hit": False, "request_count": 1,
                      "estimated_cost": cost, "latency_seconds": round(time.monotonic() - started, 3), "stop_reason": stop_reason})
         # This is an ignored private run directory, never a tracked response corpus.
         write_json(self.run_dir / "responses" / (digest + ".json"), raw)
         if not valid:
             raise ProviderError(f"{provider_alias}: response contained no text (stop_reason={stop_reason})")
+        if archive.get("raw_response_archive_error"):
+            raise ProviderError(f"{provider_alias}: raw response archive failed; usage was retained")
         result = {"text": text, "usage": usage, "request_id": request_id, "model": returned_model,
                   "cache_key": digest, "local_cache_hit": False, "stop_reason": stop_reason}
         write_json(cached_file, result)
