@@ -14,7 +14,8 @@ import math
 import random
 import re
 
-from .engine import _clean_text, _finite, _integer, _normalize_events, _parse
+from .config import get_video_intro
+from .engine import VIDEO_INTRO_RULES, _clean_text, _finite, _integer, _normalize_events, _parse
 from .scheduler import _ceil_ms, _next_slot, schedule_comments, stable_seed, text_key
 
 
@@ -30,6 +31,14 @@ uncertain=true 或带“像、状、疑似”的观察不能肯定化。若依�
 没有自然的回应就沉默，comments=[]。最多一条，只输出 JSON：
 {"comments":[{"text":"短回应","interaction_type":"reply|correction|agreement",
 "evidence_event_ids":["提供的证据事件id"]}]}。不加解释、Markdown或思考过程。"""
+
+SYSTEM_PROMPT_WITH_INTRO = SYSTEM_PROMPT.replace(
+    "只看见这一条父弹幕和 events，当前进度是 checkpoint；",
+    "可了解 video_intro 基础背景，只看见这一条父弹幕和当前 events，进度是 checkpoint；", 1
+).replace(
+    "只能依据 events，不借作品原剧情或外部知识补事实；",
+    "当前事实只能依据 events，video_intro 只作背景；不借作品原剧情或外部知识补事实；", 1
+) + "\n" + VIDEO_INTRO_RULES
 
 _UNCERTAIN = re.compile(r"疑似|似乎|可能|不确定|看不清|轮廓|像|状")
 _HEDGED = re.compile(r"[?？]|可能|好像|不一定|未必|似乎|也许|不确定|看不清|看不出|难说|吧|吗")
@@ -117,6 +126,8 @@ def add_interactions(analysis: dict, config: dict, client, result: dict) -> dict
     options = interaction_options(config)
     if not options["enabled"]:
         return result
+    video_intro = get_video_intro(config)
+    system_prompt = SYSTEM_PROMPT_WITH_INTRO if video_intro else SYSTEM_PROMPT
     duration = _finite(analysis["video"]["duration"], "video.duration", .001)
     if result.get("video", {}).get("id") != analysis["video"].get("id"):
         raise ValueError("Interaction analysis and result must refer to the same video")
@@ -146,6 +157,9 @@ def add_interactions(analysis: dict, config: dict, client, result: dict) -> dict
         "calls_planned": 0, "calls_succeeded": 0, "calls_failed": 0, "local_cache_hits": 0,
         "silent_calls": 0, "comments_generated": 0, "skipped": {}, "filtered": {}, "errors": [],
     }
+    if video_intro:
+        diagnostics.update(video_intro_enabled=True,
+                           video_intro_sha256=hashlib.sha256(video_intro.encode()).hexdigest())
     occupied = sorted(_finite(c["time"], "comment.time") for c in base)
     reply_times = sorted(float(c["time"]) for c in existing_replies)
     replied_to = {str(c.get("reply_to", c.get("parent_id", ""))) for c in existing_replies}
@@ -208,15 +222,17 @@ def add_interactions(analysis: dict, config: dict, client, result: dict) -> dict
             continue
         viewer_rng = random.Random(stable_seed(seed, parent["id"], "interaction-viewer"))
         viewer = viewer_rng.choices(others, weights=[v["weight"] for v in others], k=1)[0]
-        common = json.dumps({"video_id": str(analysis["video"].get("id", "local")),
-                             "checkpoint": cutoff, "context_start": context_start,
-                             "max_comments": 1, "max_text_chars": options["max_text_chars"],
-                             "events": context}, ensure_ascii=False, separators=(",", ":"))
+        common_data = {"video_id": str(analysis["video"].get("id", "local"))}
+        if video_intro:
+            common_data["video_intro"] = video_intro
+        common_data.update(checkpoint=cutoff, context_start=context_start,
+                           max_comments=1, max_text_chars=options["max_text_chars"], events=context)
+        common = json.dumps(common_data, ensure_ascii=False, separators=(",", ":"))
         variant = json.dumps({"persona": {key: viewer[key] for key in ("id", "label", "description")},
                               "parent": {key: parent[key] for key in ("id", "time", "text", "event_id", "knowledge_cutoff")},
                               "sample_seed": stable_seed(seed, parent["id"], viewer["id"], "interaction")},
                              ensure_ascii=False, separators=(",", ":"))
-        task_id = hashlib.sha256(f"interaction-v1\0{viewer['provider']}\0{SYSTEM_PROMPT}\0{common}\0{variant}".encode()).hexdigest()
+        task_id = hashlib.sha256(f"interaction-v1\0{viewer['provider']}\0{system_prompt}\0{common}\0{variant}".encode()).hexdigest()
         tasks.append({"index": len(tasks), "id": task_id, "parent": parent, "source": source,
                       "viewer": viewer, "cutoff": cutoff, "time": slot, "latest": latest,
                       "context": context_by_id, "common": common, "variant": variant})
@@ -230,7 +246,7 @@ def add_interactions(analysis: dict, config: dict, client, result: dict) -> dict
     def run(task: dict) -> tuple[dict, object, list | None, dict | None]:
         response = None
         try:
-            response = client.complete(task["viewer"]["provider"], SYSTEM_PROMPT, task["common"],
+            response = client.complete(task["viewer"]["provider"], system_prompt, task["common"],
                                        task["variant"], stage="interaction", cache_key=task["id"])
         except Exception as exc:
             return task, response, None, {"stage": "provider", "error_type": type(exc).__name__}

@@ -5,6 +5,16 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 
+def get_video_intro(config):
+    """Read optional background without adding defaults to the saved config."""
+    value = config.get("video_intro")
+    if value is None:
+        return ""
+    if not isinstance(value, str):
+        raise ValueError("video_intro must be a string or null")
+    return value.strip()
+
+
 def check_endpoint(provider):
     url = urlsplit(provider["base_url"])
     if url.username or url.password or url.query or url.fragment:
@@ -47,4 +57,5 @@ def load_config(path):
             raise ValueError(f"Unknown provider for audience {persona['id']}")
     for section in ("generation", "scheduler", "analysis"):
         config.setdefault(section, {})
+    get_video_intro(config)
     return config

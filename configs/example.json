@@ -1,4 +1,5 @@
 {
+  "video_intro": "",
   "providers": {
     "minimax": {
       "type": "anthropic",
