@@ -12,6 +12,8 @@
 
 [91 分钟长片实测报告](docs/LONGFORM_EXPERIMENT_2026-11-06.md)记录了 **2,803 条最终弹幕**、失败恢复和完整费用边界，并附脱敏聚合数据。NAS 条件写与读回已通过；当贝盒子上的 MzDKPlayer NAS 兼容版已实际载入全部弹幕，片头显示、暂停恢复及跳转至约一小时处的同步检查通过。实机验收覆盖这些片段，尚未连续观看全片。
 
+[基础简介增量实验](docs/VIDEO_INTRO_EXPERIMENT_2026-11-06.md)随后进行了 40 次小样调用，保留原池并新增 23 条，NAS 轨道更新为 **2,826 条**，本轮参考费 **$0.01446**。此次历史对照未显示整体质量优势；简介保留为可选背景能力。增量文件已读回验证，本轮没有重新做电视播放验收。
+
 ![Sintel 实测弹幕预览](docs/images/sintel-preview.png)
 
 画面 © Blender Foundation / Durian Open Movie Project，CC BY 3.0；中文 AI 弹幕与界面叠层由本项目添加。

@@ -1,0 +1,244 @@
+{
+  "format": "danmaku-video-intro-public-summary/v1",
+  "experiment_date": "2026-11-06",
+  "feature_commit": "2c2a4f350d28e2b0e8015a0c2f906b76070add80",
+  "media_duration_seconds": 5490.256,
+  "intro": {
+    "characters": 100,
+    "scope": "pre-viewing subject, series identity and initial protagonist background",
+    "full_transcript_summary_used": false,
+    "automatically_collected_by_cli": false
+  },
+  "design": {
+    "checkpoints": 20,
+    "historical_pairs": 40,
+    "new_requests": 40,
+    "requests_by_provider": {
+      "minimax": 20,
+      "deepseek": 20
+    },
+    "selection": "purposeful samples across roughly equal time intervals",
+    "matched_fields": [
+      "provider settings",
+      "persona",
+      "checkpoint",
+      "events",
+      "target event ids",
+      "sampling variant"
+    ],
+    "changed_request_inputs": [
+      "video_intro",
+      "conditional background system rules"
+    ],
+    "historical_baseline_new_api_calls": 0,
+    "new_stt_calls": 0,
+    "new_vision_calls": 0
+  },
+  "generation": {
+    "succeeded_requests": 40,
+    "failed_requests": 0,
+    "silent_requests": 0,
+    "accepted_candidates": 40,
+    "over_call_limit_rows_filtered": 1,
+    "attempt_archives_verified": 40
+  },
+  "review": {
+    "reviewer_type": "assistant_agents",
+    "A_B_arm_labels_masked": true,
+    "independent_human_quality_evaluation": false,
+    "pairs": 40,
+    "preferred_new": 14,
+    "preferred_historical": 17,
+    "tie": 9,
+    "new_hard_rejects": 0,
+    "conclusion": "No overall quality improvement established in this exploratory historical sample.",
+    "limits": [
+      "single stochastic samples",
+      "purposeful selection",
+      "historical rather than concurrent control",
+      "different personas assigned to the two models",
+      "not a model ranking"
+    ]
+  },
+  "curation": {
+    "added": 23,
+    "not_added": 17,
+    "not_added_categories": {
+      "near_duplicate": 4,
+      "generic_redundant": 4,
+      "crowded_redundant": 2,
+      "weak_style": 1,
+      "exact_duplicate": 4,
+      "weak_interpretation": 2
+    },
+    "new_text_manually_rewritten": false,
+    "exclusion_rate_is_not_an_error_rate": true
+  },
+  "merged_track": {
+    "original_comments": 2803,
+    "added_comments": 23,
+    "final_comments": 2826,
+    "methods": {
+      "independent": 2532,
+      "controlled_repeat": 200,
+      "interaction": 94
+    },
+    "all_original_json_objects_unchanged": true,
+    "all_original_xml_rows_unchanged": true,
+    "original_pool_file_unchanged": true,
+    "scheduler_code_changed": false,
+    "timing_method": "one-off reviewed insertion plan for only the added comments",
+    "minimum_added_to_other_start_gap_seconds": 0.674,
+    "added_delay_after_checkpoint_seconds": {
+      "min": 0.351,
+      "median": 2.8,
+      "max": 5.2
+    },
+    "maximum_comments_in_any_half_open_second": 3,
+    "average_per_minute": 30.883805782462602,
+    "verification_status": "passed"
+  },
+  "usage": {
+    "new_sample": {
+      "input_tokens": 69258,
+      "fresh_input_tokens": 58378,
+      "cached_input_tokens": 10880,
+      "cache_write_tokens": 0,
+      "output_tokens": 2116,
+      "reasoning_tokens": 0,
+      "audio_seconds": 0,
+      "currency": "USD",
+      "request_count": 40,
+      "local_cache_hits": 0,
+      "estimated_cost": 0.01446169,
+      "payg_estimated_cost": 0.00871027,
+      "subscription_reference_cost": 0.00575142,
+      "unpriced_requests": 0,
+      "failed_requests": 0,
+      "actual_cost": null,
+      "billing_mode": "mixed",
+      "cache_hit_ratio": 0.15709376534118802,
+      "cost_complete": true,
+      "by_model": [
+        {
+          "provider": "deepseek",
+          "model": "deepseek-flash",
+          "input_tokens": 33556,
+          "fresh_input_tokens": 26644,
+          "cached_input_tokens": 6912,
+          "cache_write_tokens": 0,
+          "output_tokens": 563,
+          "reasoning_tokens": 0,
+          "audio_seconds": 0,
+          "currency": "USD",
+          "request_count": 20,
+          "local_cache_hits": 0,
+          "estimated_cost": 0.00871027,
+          "payg_estimated_cost": 0.00871027,
+          "subscription_reference_cost": 0.0,
+          "unpriced_requests": 0,
+          "failed_requests": 0,
+          "actual_cost": null,
+          "billing_mode": "payg",
+          "cache_hit_ratio": 0.2059840267016331,
+          "cost_complete": true
+        },
+        {
+          "provider": "minimax",
+          "model": "MiniMax-M3.1-Flash",
+          "input_tokens": 35702,
+          "fresh_input_tokens": 31734,
+          "cached_input_tokens": 3968,
+          "cache_write_tokens": 0,
+          "output_tokens": 1553,
+          "reasoning_tokens": 0,
+          "audio_seconds": 0,
+          "currency": "USD",
+          "request_count": 20,
+          "local_cache_hits": 0,
+          "estimated_cost": 0.00575142,
+          "payg_estimated_cost": 0.0,
+          "subscription_reference_cost": 0.00575142,
+          "unpriced_requests": 0,
+          "failed_requests": 0,
+          "actual_cost": null,
+          "billing_mode": "subscription",
+          "cache_hit_ratio": 0.11114223292812728,
+          "cost_complete": true
+        }
+      ],
+      "by_stage": [
+        {
+          "stage": "generation",
+          "input_tokens": 69258,
+          "fresh_input_tokens": 58378,
+          "cached_input_tokens": 10880,
+          "cache_write_tokens": 0,
+          "output_tokens": 2116,
+          "reasoning_tokens": 0,
+          "audio_seconds": 0,
+          "currency": "USD",
+          "request_count": 40,
+          "local_cache_hits": 0,
+          "estimated_cost": 0.01446169,
+          "payg_estimated_cost": 0.00871027,
+          "subscription_reference_cost": 0.00575142,
+          "unpriced_requests": 0,
+          "failed_requests": 0,
+          "actual_cost": null,
+          "billing_mode": "mixed",
+          "cache_hit_ratio": 0.15709376534118802,
+          "cost_complete": true
+        }
+      ]
+    },
+    "historical_comparison_only": {
+      "input_tokens": 61733,
+      "fresh_input_tokens": 50067,
+      "cached_input_tokens": 11666,
+      "cache_write_tokens": 0,
+      "output_tokens": 1990,
+      "reasoning_tokens": 0,
+      "audio_seconds": 0,
+      "currency": "USD",
+      "request_count": 40,
+      "local_cache_hits": 0,
+      "estimated_cost": 0.01303308,
+      "payg_estimated_cost": 0.00840024,
+      "subscription_reference_cost": 0.00463284,
+      "unpriced_requests": 0,
+      "failed_requests": 0,
+      "actual_cost": null,
+      "billing_mode": "mixed",
+      "cache_hit_ratio": 0.1889751024573567,
+      "cost_complete": true
+    },
+    "historical_comparison_is_not_this_batch_spend": true,
+    "input_token_delta_including_conditional_rules": 7525,
+    "mean_input_token_delta_per_request": 188.125,
+    "reference_cost_not_invoice": true,
+    "review_and_development_conversation_resources_not_priced": true,
+    "historical_cost_difference_not_pure_intro_cost": true
+  },
+  "deployment": {
+    "created_at": "2026-11-06T23:47:05.565176+08:00",
+    "comments": 2826,
+    "added_comments": 23,
+    "xml_bytes": 252881,
+    "xml_sha256": "c3ab960493758f6310ff1d7b9afd3622a219945dc690815be252240929d82175",
+    "previous_xml_sha256": "2e831081e24b4595aa6a08388494648f9e5e103f966d113cda825eddd8ab494e",
+    "readback_verified": true,
+    "all_original_json_comments_unchanged": true,
+    "all_original_xml_rows_unchanged": true,
+    "tv_verified": false,
+    "tv_status": "not_retested_per_user_scope",
+    "prior_2803_track_tv_verified": true,
+    "device_actions_this_batch": 0
+  },
+  "verification": {
+    "python_regressions": 99,
+    "new_video_intro_tests": 7,
+    "code_ci": "success",
+    "ci_url": "https://github.com/AxelHu/danmaku-simulator/actions/runs/42244785110"
+  }
+}
