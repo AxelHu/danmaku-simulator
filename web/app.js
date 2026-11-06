@@ -74,6 +74,7 @@
     const base = comment.persona.split(':echo:')[0];
     const defaults = { casual: '随性观众', detail: '细节观察', joker: '玩梗观众', empathy: '共情观众' };
     const name = comment.persona_label || defaults[base] || base;
+    if (comment.generation_method === 'interaction') return `${name} · 接话`;
     return comment.persona.includes(':echo:') ? `${name} · 复读` : name;
   }
 
@@ -114,12 +115,19 @@
   function normalizeComments(payload) {
     const source = Array.isArray(payload) ? payload : payload && payload.comments;
     if (!Array.isArray(source)) throw new Error('弹幕 JSON 需要是一个数组，或包含 comments 数组。');
+    const isTrack = payload?.format === 'danmaku-track/v1';
+    const scale = isTrack ? number(payload.timeline?.scale ?? 1) : 1;
+    const offset = isTrack ? number(payload.timeline?.offset ?? 0) : 0;
+    const duration = isTrack ? number(payload.timeline?.target_duration) ?? ((number(payload.video?.duration) || 0) * scale + offset) : null;
+    if (isTrack && payload.timeline?.target_duration != null && number(payload.timeline.target_duration) === null) throw new Error('弹幕轨目标时长无效。');
+    if (scale === null || scale <= 0 || offset === null || (isTrack && !(duration > 0))) throw new Error('弹幕轨的时间比例、偏移或目标时长无效。');
     let rejected = 0;
     const comments = [];
     source.forEach((raw, index) => {
       if (!raw || typeof raw !== 'object') { rejected++; return; }
-      const at = number(raw.time ?? raw.timestamp ?? raw.at);
-      if (at === null || at < 0 || typeof raw.text !== 'string' || !raw.text.trim()) { rejected++; return; }
+      const sourceTime = number(raw.time ?? raw.timestamp ?? raw.at);
+      const at = sourceTime === null ? null : sourceTime * scale + offset;
+      if (sourceTime === null || sourceTime < 0 || at < 0 || (duration !== null && at >= duration) || typeof raw.text !== 'string' || !raw.text.trim()) { rejected++; return; }
       let color = number(raw.color);
       if (typeof raw.color === 'string' && /^#[\da-f]{6}$/i.test(raw.color)) color = parseInt(raw.color.slice(1), 16);
       const mode = Number(raw.mode);
@@ -132,6 +140,8 @@
         persona: String(raw.persona ?? '观众'),
         provider: String(raw.provider ?? ''), model: String(raw.model ?? ''),
         event_id: String(raw.event_id ?? ''), kind: String(raw.kind ?? ''),
+        generation_method: String(raw.generation_method ?? ''),
+        reply_to: String(raw.reply_to ?? ''), parent_text: String(raw.parent_text ?? ''),
         knowledge_cutoff: number(raw.knowledge_cutoff), synthetic: raw.synthetic === true,
         _index: index,
       };
@@ -281,6 +291,7 @@
       const c = state.filtered[i];
       const row = textElement('button', `comment-row${i === state.activeIndex ? ' current' : ''}`);
       row.type = 'button'; row.title = `${timecode(c.time)}  ${c.text}`;
+      if (c.reply_to && c.parent_text) row.title += `\n接话：${c.parent_text}`;
       row.setAttribute('aria-label', `跳转到 ${timecode(c.time)}：${c.text}`);
       const stamp = textElement('span', 'comment-time', timecode(c.time));
       const copy = textElement('span', 'comment-copy');
@@ -326,7 +337,7 @@
     }
     return null;
   }
-  function renderUsage(payload) {
+  function renderUsage(payload, diagnostics) {
     const u = payload && (payload.summary || payload);
     const available = u && typeof u === 'object' && Object.keys(u).length > 0;
     const input = available ? metric(u, 'input_tokens', 'total_input_tokens', 'prompt_tokens') : null;
@@ -340,7 +351,7 @@
     const audio = available ? metric(u, 'audio_seconds') : null;
     const currency = typeof u?.currency === 'string' ? u.currency : 'USD';
     $('metricCost').textContent = money(cost, currency);
-    $('metricCostNote').textContent = cost === null ? '尚未提供计价数据' : `${currency} · 按配置价格折算`;
+    $('metricCostNote').textContent = cost === null ? '尚未提供计价数据' : `${currency} · ${diagnostics?.base_comments_reused ? '本次新增互动参考费' : '按配置价格折算'}`;
     $('metricInput').textContent = count(input);
     $('metricInputNote').textContent = cached !== null ? `其中缓存读取 ${count(cached)}` : '含缓存读取';
     $('metricOutput').textContent = count(output);
@@ -354,6 +365,8 @@
     let billing = '参考成本由用量与价格配置折算；实际扣费以供应商账单为准。';
     if (u?.billing_mode === 'subscription' || u?.billing_mode === 'mixed') billing = '套餐部分为参考折算，非额外扣费。实际扣费以供应商账单为准。';
     if (unpriced && unpriced > 0) billing += ` ${count(unpriced)} 次调用尚未计价，成本合计不完整。`;
+    if (diagnostics?.base_comments_reused) billing = '此处只统计本次新增互动，原弹幕的生成费用未重复计入。' + billing;
+    if (diagnostics?.recorded_sample) billing = '这是已完成实验的历史用量，回放没有新模型请求。' + billing;
     $('billingNote').textContent = billing;
     $('billingNote').classList.toggle('incomplete', !!unpriced);
     const rawRows = u?.by_model || payload?.by_model || [];
@@ -516,7 +529,7 @@
       normalizeComments(data);
       state.runId = id; state.data = data; state.localComments = false;
       const rejected = installComments(data);
-      renderUsage(data.usage);
+      renderUsage(data.usage, data.diagnostics);
       const title = data.video?.title || data.title || id;
       const duration = number(data.video?.duration) || 0;
       const url = safeServerVideoUrl(data.video?.url);
@@ -558,12 +571,12 @@
       if (state.fetchController) state.fetchController.abort(); state.fetchSerial++;
       state.runId = null; state.data = payload; state.localComments = true;
       const rejected = installComments(payload);
-      renderUsage(!Array.isArray(payload) ? payload.usage : null);
+      renderUsage(!Array.isArray(payload) ? payload.usage : null, payload?.diagnostics);
       populateRuns();
       setPill('本地弹幕', '');
       $('runInfo').textContent = `${count(state.comments.length)} 条 · ${file.name}`;
       if (!state.mediaUrl) {
-        state.mediaDuration = number(payload?.video?.duration) || 0;
+        state.mediaDuration = payload?.format === 'danmaku-track/v1' ? number(payload.timeline?.target_duration) ?? ((number(payload.video?.duration) || 0) * (number(payload.timeline?.scale) ?? 1) + (number(payload.timeline?.offset) ?? 0)) : number(payload?.video?.duration) || 0;
         updateTransport();
         placeholder('弹幕已就位，等你选片', '选择对应的视频文件，点击列表中的时间即可跳转。');
       }

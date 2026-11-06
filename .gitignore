@@ -6,6 +6,7 @@ __pycache__/
 build/
 dist/
 runs/
+published/
 .cache/
 .local/
 .env

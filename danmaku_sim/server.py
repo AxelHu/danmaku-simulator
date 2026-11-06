@@ -9,6 +9,7 @@ from pathlib import Path
 import re
 from urllib.parse import unquote, urlsplit
 
+from . import __version__
 from .costs import load_usage
 
 
@@ -29,10 +30,12 @@ def public_run(directory):
 
 
 class PreviewHandler(BaseHTTPRequestHandler):
-    server_version = "DanmakuPreview/0.1"
+    server_version = f"DanmakuPreview/{__version__}"
 
-    def __init__(self, *args, runs_dir, web_dir, **kwargs):
+    def __init__(self, *args, runs_dir, web_dir, library_dir=None, catalog_only=False, **kwargs):
         self.runs_dir, self.web_dir = Path(runs_dir).resolve(), Path(web_dir).resolve()
+        self.library_dir = Path(library_dir).resolve() if library_dir is not None else None
+        self.catalog_only = catalog_only
         super().__init__(*args, **kwargs)
 
     def log_message(self, format, *args):
@@ -50,7 +53,7 @@ class PreviewHandler(BaseHTTPRequestHandler):
         if self.command != "HEAD":
             self.wfile.write(body)
 
-    def file(self, path, *, download=None):
+    def file(self, path, *, download=None, published=False):
         path = Path(path)
         if not path.is_file():
             return self.json({"error": "File unavailable"}, 404)
@@ -87,8 +90,10 @@ class PreviewHandler(BaseHTTPRequestHandler):
         length = end - start + 1 if size else 0
         self.send_header("Content-Length", str(length))
         self.send_header("Accept-Ranges", "bytes")
-        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Cache-Control", "public, max-age=31536000, immutable" if published and path.name != "catalog.json" else "no-cache")
         self.send_header("X-Content-Type-Options", "nosniff")
+        if published:
+            self.send_header("Access-Control-Allow-Origin", "*")
         if status == 206:
             self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
         if download:
@@ -112,6 +117,19 @@ class PreviewHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         try:
             path = unquote(urlsplit(self.path).path)
+            if path.startswith("/catalog/"):
+                if self.library_dir is None:
+                    return self.json({"error": "No published library configured"}, 404)
+                relative = path.removeprefix("/catalog/")
+                valid = relative == "catalog.json" or re.fullmatch(r"tracks/[0-9a-f]{64}/[A-Za-z0-9][A-Za-z0-9_-]{0,79}/[0-9a-f]{64}/comments\.(?:json|xml|ass)", relative)
+                if not valid:
+                    return self.json({"error": "Not found"}, 404)
+                target = self.library_dir / relative
+                if any(parent.is_symlink() for parent in [target, *target.parents] if parent != self.library_dir and self.library_dir in parent.parents):
+                    return self.json({"error": "Not found"}, 404)
+                return self.file(target, published=True)
+            if self.catalog_only:
+                return self.json({"error": "This service only exposes /catalog/"}, 404)
             if path in ("/", "/index.html", "/app.js", "/style.css"):
                 return self.file(self.web_dir / ("index.html" if path == "/" else path.lstrip("/")))
             if path == "/api/runs":
@@ -155,13 +173,15 @@ class PreviewHandler(BaseHTTPRequestHandler):
             self.json({"error": "Run data unavailable or invalid"}, 422)
 
 
-def serve(runs_dir="runs", host="127.0.0.1", port=8792):
+def serve(runs_dir="runs", host="127.0.0.1", port=8792, *, library_dir=None, catalog_only=False):
+    if catalog_only and library_dir is None:
+        raise ValueError("--catalog-only requires --library")
     web_dir = Path(__file__).resolve().parents[1] / "web"
     if not (web_dir / "index.html").exists():
         web_dir = Path(__file__).resolve().parent / "web"
-    handler = partial(PreviewHandler, runs_dir=runs_dir, web_dir=web_dir)
+    handler = partial(PreviewHandler, runs_dir=runs_dir, web_dir=web_dir, library_dir=library_dir, catalog_only=catalog_only)
     server = ThreadingHTTPServer((host, port), handler)
-    print(f"Danmaku Simulator preview: http://{host}:{port} (read-only)", flush=True)
+    print(f"Danmaku Simulator {'catalog' if catalog_only else 'preview'}: http://{host}:{port}{'/catalog/catalog.json' if catalog_only else ''} (read-only)", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

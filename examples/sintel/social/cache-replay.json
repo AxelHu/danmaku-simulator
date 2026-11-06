@@ -1,0 +1,13 @@
+{
+  "exit_code": 0,
+  "elapsed_seconds": 0.026,
+  "network_attempts": 0,
+  "local_cache_hits_added": 3,
+  "api_requests_before": 3,
+  "api_requests_after": 3,
+  "reference_cost_before": 0.00058329,
+  "reference_cost_after": 0.00058329,
+  "same_comments_after_replay": true,
+  "all_base_comments_unchanged": true,
+  "total_comments": 68
+}

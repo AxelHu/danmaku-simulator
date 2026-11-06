@@ -4,6 +4,10 @@
 
 项目处于可运行原型阶段。当前重点是检验相关性、时间和观看体验，并让每次实验的 token 与成本能够追溯。
 
+**0.2 新增：**少量弹幕接话、可版本化的本地/远端弹幕目录、HTML5 视频用户脚本，以及电视播放器同名 XML 导出。生成、分发和客户端在同仓分模块维护；实际视频与个人弹幕库独立存放。
+
+[分发与数据组织](docs/DISTRIBUTION.md) · [网页端安装与使用](clients/browser/README.md) · [互动生成](docs/INTERACTIONS.md) · [电视播放器适配](docs/TV_PLAYER_ADAPTER.md)
+
 首个真实样例已完成：52 秒 Sintel 预告片，**63 条独立弹幕 + 2 条受控复读**，含一份 STT 的完整参考成本约 **$0.017**。这是单个样本的测量，并非账单实扣或观看质量保证。详见[实测报告](docs/EXPERIMENT_2026-11-06.md)。
 
 ![Sintel 实测弹幕预览](docs/images/sintel-preview.png)
@@ -16,11 +20,25 @@
 - **独立观众**：按 persona、模型与采样轮次分别请求；角色说明放在共同证据之后；允许安静和不发言。
 - **时间约束**：只给观众当前检查点之前的证据。每条弹幕记录触发事件、观众、模型和已知信息截止时间，调度器不允许早于该时间发出。
 - **可控复读**：短句可在小范围内跟风，保留父弹幕来源；不会把所有相同文本一律去重。
+- **少量互动**：可选的第二阶段让另一位观众接一句已出现的弹幕，默认只接一层；预留空位后才请求，保留父子关系并单独统计费用。
 - **输出**：JSON、Bilibili 风格 XML、滚动弹幕 ASS；只读网页预览支持暂停、拖动、倍速、密度、透明度、字号和显示区域。
 - **成本可观测**：逐请求保存输入、输出、缓存读取/写入、时延、阶段、模型、错误和价格快照；区分本地结果复用与提供方提示词缓存。
+- **分发与消费**：同一份目录可放本地、NAS 或静态 HTTP；网页用户脚本读取文件、直链或目录；电视通过已校准的同名 XML 接入。
 - **轻量运行**：Python 3.11+ 标准库，额外仅需 ffmpeg / ffprobe；网页无 CDN 和构建依赖。
 
 模型接口支持 OpenAI Chat Completions 兼容协议和 Anthropic Messages 兼容协议。配置示例使用 MiniMax M3.1 Flash 与 DeepSeek Flash；可替换供应商、模型、参数、观众比例和采样轮数。
+
+## 在已有视频网站使用
+
+安装[用户脚本](clients/browser/README.md)后，在普通 HTML5 视频页面打开“弹幕模拟器”面板，导入本地 JSON/XML，或读取自己选定的弹幕地址/目录。脚本只负责叠加显示，视频仍由原站播放；不会向网站发送评论。
+
+仓库附有[两条真实生成轨道](examples/catalog/)：标准版 65 条，少量互动版 68 条。公开 HTTPS 样例目录可作为远端源：
+
+```text
+https://raw.githubusercontent.com/AxelHu/danmaku-simulator/main/examples/catalog/catalog.json
+```
+
+这些轨道只对应提供的 Sintel 预告片版本，不能直接套到任意同名长片。B 站分 P 和其他剪辑需要明确匹配与对轴。网页端的实际验收范围与兼容边界见客户端 README。
 
 ## 快速开始
 
@@ -79,6 +97,23 @@ python3 -m danmaku_sim serve --port 8793
 
 程序不会自动改用另一密钥、账户或模型。失败调用写入账本；超时的计费状态可能未知，不会按零费用处理。重新运行会复用已有成功响应，失败请求才需要再执行。
 
+### 给已有结果加少量接话并分发
+
+```bash
+# 保留原运行；新账本只统计此次新增互动。
+python3 -m danmaku_sim interact --run runs/video-first \
+  --config config.local.json --out runs/video-social
+
+python3 -m danmaku_sim publish runs/video-social \
+  --library published --track-id social --label '少量互动'
+
+# 本地预览加分发。
+python3 -m danmaku_sim serve --port 8793 --library published
+# 只提供弹幕目录时，加 --catalog-only；视频与运行预览路由会关闭。
+```
+
+互动默认关闭；`interact` 命令明确启用这一阶段。原 `run` / `generate` 则只在配置 `interactions.enabled=true` 时追加互动。当前真实实验新增 3 条接话、3 次调用，参考费 $0.00058329；原 65 条弹幕未改变，详见[本轮记录](docs/INTERACTION_DISTRIBUTION_EXPERIMENT_2026-11-06.md)。
+
 ## 观众与时间
 
 示例包含随手看、细节党、轻吐槽、共情党四类观众。它们不是相互对话的四个长会话，而是独立读入同一时点的信息，再分别产生反应。`rounds` 增加新的采样轮次；直接重跑相同配置主要用于恢复和结果复用。
@@ -117,7 +152,7 @@ B 站风格的目标是短句、口语、针对当前片段的具体反应。不
 - 单张关键帧不能准确说明连续动作、速度、配乐或声效。动作密集内容后续应增加短帧序列或音频事件识别。
 - STT 与视觉描述可能出错；长音频按片段转写，重叠边界和少量音画错位仍需抽样核验。明显不同的音画起点会要求先提供对齐字幕或归一化媒体。
 - 目前没有训练专用弹幕模型，没有引入爬取弹幕语料，也没有宣称通过“像真人”评测。观看体验需要多类视频和用户验收。
-- 首版网页用于本地预览，生成通过 CLI 启动。播放器 / 字幕导出主要覆盖普通滚动弹幕，复杂样式可进一步使用成熟转换工具。
+- 生成通过 CLI 启动，本地网页用于实验预览，用户脚本用于已有 HTML5 视频页面。跨 iframe、封闭播放器与所有网站的兼容性尚未覆盖；复杂弹幕样式可进一步使用成熟转换工具。
 
 ## 相关工作
 
@@ -130,9 +165,11 @@ B 站风格的目标是短句、口语、针对当前片段的具体反应。不
 ```bash
 python3 -m unittest discover -s tests -v
 node --check web/app.js
+node --check clients/browser/danmaku-simulator.user.js
+node --test tests/browser/*.test.cjs
 ```
 
-测试覆盖时间因果、密度与复读、导出、用量口径、异常响应、媒体身份和只读服务边界。真实 API 实验另记于 `docs/`，不把测试夹具当作真实质量样本。
+测试覆盖时间因果、密度与复读、单层互动、独立账本、目录发布、时间映射、导出、用量口径、异常响应、媒体身份和只读服务边界。浏览器验收步骤见客户端 README；真实 API 实验另记于 `docs/`，不把测试夹具当作真实质量样本。
 
 架构与数据约定见 [ARCHITECTURE.md](docs/ARCHITECTURE.md)，公开真实样例见 [EXPERIMENT_2026-11-06.md](docs/EXPERIMENT_2026-11-06.md)。
 

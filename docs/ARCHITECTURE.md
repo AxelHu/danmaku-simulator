@@ -11,13 +11,17 @@ flowchart TD
     E --> C["截止当前事件的上下文"]
     C --> P["独立观众、模型与采样轮次"]
     P --> S["反应时间、密度与复读"]
-    S --> O["预览 / JSON / XML / ASS"]
+    S --> I["可选的少量接话"]
+    I --> O["预览 / JSON / XML / ASS"]
     F --> L["逐请求用量账本"]
     A --> L
     P --> L
+    I --> L
 ```
 
 视频分析一次，多个观众复用同一份带时间的证据。生成阶段没有共享的群聊历史：其他观众先写了什么，不会影响独立采样。受控复读由后处理增加，并保留父弹幕和新的虚拟观众身份。
+
+可选互动在独立弹幕完成后执行，每次只向另一位观众提供一条已出现的父弹幕和当前证据；它不回写独立采样上下文。调用前先预留合法密度位置，费用单列为 `interaction`。详见 [INTERACTIONS.md](INTERACTIONS.md)。
 
 ## 模块
 
@@ -27,9 +31,12 @@ flowchart TD
 | `providers.py` | 明确配置的模型请求、响应缓存、实际用量留账 |
 | `engine.py` | 因果上下文、独立观众任务、JSON 解析和候选过滤 |
 | `scheduler.py` | 反应延迟、任意一秒窗口密度上限、受控复读 |
+| `interactions.py` | 有预算的单层接话、父子关系、独立用量 |
 | `exporters.py` | XML、ASS、JSON 与导出丢弃报告 |
+| `distribution.py` | 轻量轨道、版本化目录、精确匹配候选、同名 XML |
 | `costs.py` | 供应商/模型/阶段汇总、订阅与按量参考成本 |
 | `server.py` / `web/` | 只读运行预览、HTTP Range、媒体时间驱动的 Canvas |
+| `clients/browser/` | 已有 HTML5 视频页面的文件/远端轨道消费端 |
 
 ## 时间数据
 
@@ -99,3 +106,5 @@ persona × provider × round × checkpoint 分别调用。共同系统提示、�
 | `GET /api/runs/<id>/export.ass` | 滚动弹幕 ASS |
 
 只有上述固定路由。预览没有生成 API，不接受远程任意路径。浏览器选择本地文件时使用 Blob，既不会上传，也不会按导入 JSON 里的 URL 自动访问网站。
+
+提供 `--library` 后额外开放 `/catalog/catalog.json` 与固定格式版本文件路径。`--catalog-only` 关闭上述全部预览/运行/视频接口，仅分发已经发布的目录。轨道文件不含视频、运行配置与原始证据。分发协议、时间映射和客户端边界见 [DISTRIBUTION.md](DISTRIBUTION.md)。

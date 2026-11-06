@@ -16,3 +16,5 @@ jobs:
       - run: python -m unittest discover -s tests -v
       - run: python -m compileall -q danmaku_sim
       - run: node --check web/app.js
+      - run: node --check clients/browser/danmaku-simulator.user.js
+      - run: node --test tests/browser/*.test.cjs

@@ -160,6 +160,8 @@ def generate(analysis: dict, config: dict, client) -> dict:
     layer never changes a provider after failure and never calls a mock fallback.
     A valid empty comments array is a successful decision to remain silent.
     """
+    from .interactions import add_interactions, interaction_options
+    interaction_settings = interaction_options(config)
     video = dict(analysis["video"])
     duration = _finite(video["duration"], "video.duration", .001)
     generation = config.get("generation", {})
@@ -331,5 +333,8 @@ def generate(analysis: dict, config: dict, client) -> dict:
     diagnostics["scheduler"] = scheduler_diagnostics
     diagnostics["candidates_accepted"] = len(candidates)
     diagnostics["comments_generated"] = len(comments)
-    return {"schema_version": 1, "video": video, "comments": comments,
-            "candidates": candidates, "diagnostics": diagnostics}
+    result = {"schema_version": 1, "video": video, "comments": comments,
+              "candidates": candidates, "diagnostics": diagnostics}
+    if interaction_settings["enabled"]:
+        return add_interactions(analysis, config, client, result)
+    return result

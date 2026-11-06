@@ -1,0 +1,135 @@
+{
+  "providers": {
+    "minimax": {
+      "type": "anthropic",
+      "base_url": "https://api.minimaxi.com/anthropic",
+      "api_key_env": "MINIMAX_API_KEY",
+      "model": "MiniMax-M3.1-Flash",
+      "max_tokens": 2048,
+      "temperature": 1,
+      "extra": {
+        "thinking": {
+          "type": "adaptive"
+        },
+        "output_config": {
+          "effort": "low"
+        }
+      },
+      "pricing": {
+        "currency": "USD",
+        "input_per_million": 0.15,
+        "cached_input_per_million": 0.015,
+        "output_per_million": 0.6,
+        "billing_mode": "subscription",
+        "source": "https://platform.minimax.io/docs/pricing/overview",
+        "checked_at": "2026-11-06",
+        "note": "Reference PAYG rates; subscription quota is not a measured cash charge."
+      }
+    },
+    "deepseek": {
+      "type": "openai_chat",
+      "base_url": "https://api.deepseek.com/v1",
+      "api_key_env": "DEEPSEEK_API_KEY",
+      "model": "deepseek-flash",
+      "max_tokens": 1300,
+      "temperature": 0.95,
+      "extra": {
+        "thinking": {
+          "type": "disabled"
+        },
+        "response_format": {
+          "type": "json_object"
+        }
+      },
+      "pricing": {
+        "currency": "USD",
+        "input_per_million": 0.3,
+        "cached_input_per_million": 0.006,
+        "output_per_million": 1.2,
+        "billing_mode": "payg",
+        "source": "https://api-docs.deepseek.com/quick_start/pricing/",
+        "checked_at": "2026-11-06",
+        "note": "Peak rates; off-peak is half. Explicit pricing snapshot, not invoice reconciliation."
+      }
+    }
+  },
+  "audience": [
+    {
+      "id": "casual",
+      "label": "随手看",
+      "description": "随手看视频的普通观众。短促自然，喜欢问一句或感叹；大部分时候安静。不解说画面，不熟悉作品剧情。",
+      "provider": "minimax",
+      "weight": 1.0
+    },
+    {
+      "id": "detail",
+      "label": "细节党",
+      "description": "会注意构图、光影、道具和可见的小细节，偶尔点出一个发现。不要每句夸画质，不假装知道画面外信息。",
+      "provider": "minimax",
+      "weight": 0.65
+    },
+    {
+      "id": "joker",
+      "label": "轻吐槽",
+      "description": "B站普通吐槽观众，能抓到具体反差时说个小梗。短句、有口语感，不堆网络热词，不每条都押韵或强行搞笑。",
+      "provider": "deepseek",
+      "weight": 0.85
+    },
+    {
+      "id": "empathy",
+      "label": "共情党",
+      "description": "更在意当前人物看起来的处境、表情和危险；自然感叹、担心或一句鼓励。不是所有画面都要发言，不提前剧透。",
+      "provider": "deepseek",
+      "weight": 0.8
+    }
+  ],
+  "generation": {
+    "window_seconds": 6,
+    "history_seconds": 36,
+    "rounds": 2,
+    "comments_per_window": 1,
+    "seed": 42,
+    "concurrency": 2,
+    "checkpoint_mode": "events",
+    "max_text_chars": 20
+  },
+  "scheduler": {
+    "max_per_second": 3,
+    "repeat_ratio": 0.12,
+    "max_repeat_copies": 2,
+    "reaction_min": 0.35,
+    "reaction_max": 1.8,
+    "max_delay": 8,
+    "echo_max_chars": 8,
+    "echo_max_parent_delay": 2.0
+  },
+  "analysis": {
+    "vision_provider": "deepseek",
+    "frame_interval": 6,
+    "max_frames": 14,
+    "scene_detection": true
+  },
+  "stt": {
+    "type": "minimax",
+    "base_url": "https://api.minimaxi.com",
+    "api_key_env": "MINIMAX_API_KEY",
+    "language": "en",
+    "chunk_seconds": 120,
+    "currency": "USD",
+    "price_per_hour": 0.38,
+    "billing_mode": "subscription",
+    "pricing_source": "https://platform.minimax.io/docs/pricing/overview",
+    "pricing_checked_at": "2026-11-06"
+  },
+  "interactions": {
+    "enabled": true,
+    "ratio": 0.06,
+    "max_comments": 4,
+    "max_depth": 1,
+    "read_delay": 0.4,
+    "max_parent_delay": 3.0,
+    "min_spacing_seconds": 8.0,
+    "max_text_chars": 12,
+    "concurrency": 2
+  }
+}

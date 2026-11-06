@@ -1,0 +1,72 @@
+{
+  "summary": {
+    "input_tokens": 2923,
+    "fresh_input_tokens": 2667,
+    "cached_input_tokens": 256,
+    "cache_write_tokens": 0,
+    "output_tokens": 299,
+    "reasoning_tokens": 0,
+    "audio_seconds": 0,
+    "currency": "USD",
+    "request_count": 3,
+    "local_cache_hits": 3,
+    "estimated_cost": 0.00058329,
+    "payg_estimated_cost": 0.0,
+    "subscription_reference_cost": 0.00058329,
+    "unpriced_requests": 0,
+    "failed_requests": 0,
+    "actual_cost": null,
+    "billing_mode": "subscription",
+    "cache_hit_ratio": 0.08758125213821416,
+    "cost_complete": true,
+    "by_model": [
+      {
+        "provider": "minimax",
+        "model": "MiniMax-M3.1-Flash",
+        "input_tokens": 2923,
+        "fresh_input_tokens": 2667,
+        "cached_input_tokens": 256,
+        "cache_write_tokens": 0,
+        "output_tokens": 299,
+        "reasoning_tokens": 0,
+        "audio_seconds": 0,
+        "currency": "USD",
+        "request_count": 3,
+        "local_cache_hits": 3,
+        "estimated_cost": 0.00058329,
+        "payg_estimated_cost": 0.0,
+        "subscription_reference_cost": 0.00058329,
+        "unpriced_requests": 0,
+        "failed_requests": 0,
+        "actual_cost": null,
+        "billing_mode": "subscription",
+        "cache_hit_ratio": 0.08758125213821416,
+        "cost_complete": true
+      }
+    ],
+    "by_stage": [
+      {
+        "stage": "interaction",
+        "input_tokens": 2923,
+        "fresh_input_tokens": 2667,
+        "cached_input_tokens": 256,
+        "cache_write_tokens": 0,
+        "output_tokens": 299,
+        "reasoning_tokens": 0,
+        "audio_seconds": 0,
+        "currency": "USD",
+        "request_count": 3,
+        "local_cache_hits": 3,
+        "estimated_cost": 0.00058329,
+        "payg_estimated_cost": 0.0,
+        "subscription_reference_cost": 0.00058329,
+        "unpriced_requests": 0,
+        "failed_requests": 0,
+        "actual_cost": null,
+        "billing_mode": "subscription",
+        "cache_hit_ratio": 0.08758125213821416,
+        "cost_complete": true
+      }
+    ]
+  }
+}

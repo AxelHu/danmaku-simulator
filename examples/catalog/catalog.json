@@ -1,0 +1,96 @@
+{
+  "format": "danmaku-catalog/v1",
+  "schema_version": 1,
+  "items": [
+    {
+      "media_key": "b670602fa00934ca27c4351bb0efe7ea7a07fae57284e44226025eeed7c51254",
+      "video": {
+        "id": "b670602fa00934ca27c4351bb0efe7ea7a07fae57284e44226025eeed7c51254",
+        "title": "sintel-trailer",
+        "duration": 52.208333,
+        "width": 854,
+        "height": 480
+      },
+      "tracks": [
+        {
+          "id": "social",
+          "label": "少量互动 · 65 条基础弹幕与 3 条接话",
+          "revision": "3719722ad6b04efc34aca53c119e069796bb7d51a9df30e936c09846de42547e",
+          "language": "zh-CN",
+          "synthetic": true,
+          "comment_count": 68,
+          "bindings": [],
+          "timeline": {
+            "scale": 1.0,
+            "offset": 0.0
+          },
+          "formats": {
+            "json": {
+              "href": "tracks/b670602fa00934ca27c4351bb0efe7ea7a07fae57284e44226025eeed7c51254/social/3719722ad6b04efc34aca53c119e069796bb7d51a9df30e936c09846de42547e/comments.json",
+              "sha256": "02ba459e43db1f9a2718bf9c118090177b0406fd8591e04a093a9cb324a5f5d9",
+              "bytes": 24908,
+              "comment_count": 68
+            },
+            "xml": {
+              "href": "tracks/b670602fa00934ca27c4351bb0efe7ea7a07fae57284e44226025eeed7c51254/social/3719722ad6b04efc34aca53c119e069796bb7d51a9df30e936c09846de42547e/comments.xml",
+              "sha256": "dd8d5c2ea1cae88abc43e40372b25e07758909390257dc484af51054518422df",
+              "bytes": 6632,
+              "comment_count": 68
+            },
+            "ass": {
+              "href": "tracks/b670602fa00934ca27c4351bb0efe7ea7a07fae57284e44226025eeed7c51254/social/3719722ad6b04efc34aca53c119e069796bb7d51a9df30e936c09846de42547e/comments.ass",
+              "sha256": "94331fc200aee916e2918025be183f4f9c5a73fb8b7875b7f9cdaa2e4cc57537",
+              "bytes": 10073,
+              "comment_count": 68
+            }
+          },
+          "alignment": {
+            "comment_count": 68,
+            "dropped_outside_timeline": 0,
+            "duration": 52.208333
+          },
+          "ass_dropped": {}
+        },
+        {
+          "id": "standard",
+          "label": "标准 · 63 条独立弹幕与 2 条复读",
+          "revision": "31240cbc64ce4515d1e0f827a7a4e1ba38f61190fa4f9d566f929a5dc3ffd877",
+          "language": "zh-CN",
+          "synthetic": true,
+          "comment_count": 65,
+          "bindings": [],
+          "timeline": {
+            "scale": 1.0,
+            "offset": 0.0
+          },
+          "formats": {
+            "json": {
+              "href": "tracks/b670602fa00934ca27c4351bb0efe7ea7a07fae57284e44226025eeed7c51254/standard/31240cbc64ce4515d1e0f827a7a4e1ba38f61190fa4f9d566f929a5dc3ffd877/comments.json",
+              "sha256": "daae8e45fb6961a10b0316eb75e29574a4855db59ccac4ede628fd59dbd486f2",
+              "bytes": 23147,
+              "comment_count": 65
+            },
+            "xml": {
+              "href": "tracks/b670602fa00934ca27c4351bb0efe7ea7a07fae57284e44226025eeed7c51254/standard/31240cbc64ce4515d1e0f827a7a4e1ba38f61190fa4f9d566f929a5dc3ffd877/comments.xml",
+              "sha256": "6df66421cd6584c234094f09487722beabd9d49376a74290a6e05a4fa0ed929a",
+              "bytes": 6381,
+              "comment_count": 65
+            },
+            "ass": {
+              "href": "tracks/b670602fa00934ca27c4351bb0efe7ea7a07fae57284e44226025eeed7c51254/standard/31240cbc64ce4515d1e0f827a7a4e1ba38f61190fa4f9d566f929a5dc3ffd877/comments.ass",
+              "sha256": "b0dba16b87d940baa3ba6ce936272ae235593580de3ed5dcb5844409bec8bdea",
+              "bytes": 9687,
+              "comment_count": 65
+            }
+          },
+          "alignment": {
+            "comment_count": 65,
+            "dropped_outside_timeline": 0,
+            "duration": 52.208333
+          },
+          "ass_dropped": {}
+        }
+      ]
+    }
+  ]
+}
